@@ -1,0 +1,25 @@
+{
+  "session_started_at_utc": "2026-05-07T19:41:23Z",
+  "session_started_at_local": "2026-05-07T14:41:23-05:00",
+  "architect": "Andres Munoz",
+  "ai_engineer": "Claude Code (claude-opus-4-7, 1M context)",
+  "challenge": "Wolters Kluwer 2026 — Graduate Vibe Coding Challenge",
+  "project_choice": "Project 1: Cloud Cost Optimizer & Remediation Engine",
+  "stack": {
+    "language": "Python 3.11",
+    "package_manager": "uv",
+    "api_framework": "FastAPI",
+    "database": "SQLite + SQLModel",
+    "dashboard": "Streamlit",
+    "ai_orchestration": "Anthropic SDK + MCP",
+    "agent_pattern": "Opus orchestrator + Haiku workers"
+  },
+  "target_mvp_window_hours": 6,
+  "max_window_hours": 16,
+  "compliance": {
+    "no_manual_edits": true,
+    "same_ai_end_to_end": true,
+    "audit_log_file": "prompts.md",
+    "decision_log_file": "BITACORA.md"
+  }
+}
