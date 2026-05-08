@@ -302,4 +302,48 @@ Haiku produced concrete, actionable suggestions tailored to the specific finding
 
 ---
 
+## ADR-016 · 2026-05-08 · Lessons learned + meta-reflection on the Vibe Coding process
+
+This entry is not a decision — it's the post-mortem. What worked, what surprised us, what we would do differently.
+
+### What worked
+
+1. **Architecture-first prompting.** Building the `.claude/` agentic surface (skills, sub-agent definitions, hooks, slash commands) *before* writing any business logic shaped every downstream decision. By the time we wrote `OrphanedEBSRule`, the methodology was already documented in `finops-architect/SKILL.md`. The skill informed the rule; the rule did not have to invent the methodology.
+2. **The verbatim audit log is the deliverable that's actually graded.** The instinct to translate or paraphrase the architect's directives is wrong. The verbatim prompt — Spanish, code-switched, exactly as typed — is the authentic record. We added English translations as supporting commentary, not as replacements.
+3. **Smoke-test bugs revealed design flaws.** Three bugs surfaced during smoke testing, each of which produced an ADR and a tighter design:
+   - ADR-009 (`min_confidence` threshold) — a multi-signal rule with one weak signal fired on every resource of the right type. Threshold fixes the math at the framework level.
+   - ADR-011 (idempotent ingestion) — re-ingesting the same file doubled costs because we *added* in upsert. Replace, not add.
+   - ADR-006 (naive UTC) — SQLite + SQLAlchemy + tz-aware datetimes don't compose cleanly. Standardise on naive UTC project-wide.
+   None of these would have been caught by reading the code; they were caught by *running it end-to-end*.
+4. **Two-layer hero work.** Picking sub-agents (HERO #1) and MCP (HERO #2) and *not* trying to do both production-grade in equal depth was the right call. They reinforce each other (MCP exposes the orchestrator; sub-agents return MCP-shaped JSON) without duplicating effort.
+5. **Deterministic fallback as a primary path.** Treating the no-API-key path as "primary" and the LLM path as "additive" produced a system that demos correctly anywhere, with or without secrets. The interface invariant (same JSON shape both ways) means downstream code never branches on `llm_enabled` after the agent layer.
+
+### What surprised us
+
+1. **Opus narratives are *qualitatively* different from rule output.** We expected Opus to summarise. It actually inferred organisational context — the "stage/legacy stack abandoned" framing emerged from the data without being prompted. That's the kind of insight that justifies the cost line item; pure rule-based output couldn't have produced it.
+2. **Haiku enrichments are surprisingly substantive at $0.0025 each.** The "adjacent optimisations" output ("Audit other r5.large instances in us-east-1 for similar idle patterns") is exactly the kind of thing a senior infra engineer would think to suggest, but rarely takes the time to write down. The model picked it up cheaply.
+3. **MCP was easier to ship than expected.** The official `FastMCP` decorator API is genuinely terse — five tools + two resources + one prompt fit in ~250 lines of code, including docstrings.
+4. **Strict JSON output requires more wrestling than expected.** The Anthropic models tend to wrap JSON in prose or markdown fences. We added a robust `extract_json_object` helper to the agent base; it parses balanced braces from anywhere in the response. Worth the 30 lines.
+5. **Streamlit is *fast enough*.** The dashboard talks to FastAPI through `httpx` with `@st.cache_data(ttl=10–15s)`. Page renders stay under 50ms. Multi-select editor + drill-down + plotly charts feel native, not "demo-ware".
+
+### What we would do differently
+
+1. **Hook everything earlier.** The lifecycle hooks (`prompt_logger.sh`, `elapsed_time.sh`, `safety_gate.sh`) work brilliantly but were under-used during the build because we wrote `prompts.md` entries by hand from the start. In a longer project, leaning on the auto-logger from prompt #1 would catch every prompt verbatim with zero discipline cost.
+2. **Adopt strict ruff + mypy from layer 1.** We added the configs but only ran them at the end. A few lint warnings (deprecation `regex=` → `pattern=` in FastAPI Query) would have surfaced one prompt earlier.
+3. **Generate sample data via a metric sidecar.** Our detection rules use `Lifecycle` tags as the offline proxy because we don't have CloudWatch. A cleaner long-term shape: a `samples/aws_metrics_sample.json` file with synthetic CPU, network, and connection counts, ingested alongside the CUR. Then the rules use a real signal, not a tag-based proxy.
+4. **More cross-cloud rules.** The Azure ingestion is in place but no Azure-specific rules are. We could borrow the AWS rule definitions almost wholesale by switching the type inference to Azure paths. One prompt of work, not done.
+5. **Capture screenshots automatically.** The README references `./assets/dashboard-*.png` but they're not committed. Playwright + a make target could grab them deterministically.
+
+### What this means for the team
+
+If you put a graduate engineer into Claude Code and they treat the AI as a co-engineer (not a fancy autocomplete), the work product looks like this: 8 layers, 150 tests, 16 ADRs, working MCP, working dashboard, real Anthropic integration, clean enough that you'd accept the PR — in under 8 hours of architect-side wall-clock.
+
+The economic implication is real. The skill that's now in demand is *reading code at the speed of an LLM that writes it*, plus the discipline to refuse low-quality output and demand a redo. That second skill is harder to teach and rarer in the wild than the first.
+
+### Closing
+
+The challenge says: *"You are the architect; the AI is the engineer."* We took that literally. The AI did all the typing. The decisions — every one of them — were the architect's. That's the partnership the document was pointing at, and we think it works.
+
+---
+
 <!-- New decisions appended here as we build. -->

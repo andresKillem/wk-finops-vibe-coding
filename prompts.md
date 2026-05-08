@@ -272,4 +272,39 @@ ADRs added: 014 (MCP alongside REST), 015 (Streamlit talks to API, not DB).
 
 ---
 
+## #010 · 2026-05-08T05:30:00Z · Docs + presentation deck (Prompt #11)
+
+**Original message excerpt #11 (verbatim, ES):**
+
+> Toda la doc final + deck de presentación markdown. Esto es lo que el grader leerá primero.
+> [REQUISITOS … 7 items …]
+
+**Action taken:**
+- Rewrote `README.md` from scratch (~250 lines): hero badges, highlights, 30-second quickstart, ASCII architecture diagram, layered modules table, features table, stack rationale, considered-and-rejected list, vibe coding compliance section, demo URLs, MCP integration block, screenshots placeholder paths (`./assets/dashboard-*.png`), submission checklist with marked status.
+- Rewrote `docs/ARCHITECTURE.md`: mermaid graph + sequence diagrams + ER diagram, layer responsibilities, failure isolation table, performance characteristics measured.
+- Rewrote `docs/PRESENTATION.md`: 10 slides with real numbers (228 rows / 17 resources / 8 findings / $92.34/mo / 27s LLM call / $0.148 audit cost). Slide 6 quotes the actual Opus narrative; slide 8 is the vibe-coding meta with stats and considered-and-rejected.
+- Added `BITACORA.md` ADR-016 — meta-reflection / lessons learned (what worked, what surprised us, what we'd do differently).
+- Added `src/finops/utils/demo_runner.py` so `finops demo` actually works.
+
+---
+
+## #011 · 2026-05-08T05:55:00Z · Final polish, lint, smoke, push (Prompt #12)
+
+**Original message excerpt #12 (verbatim, ES):**
+
+> Cierre. Pulir, validar, push, email.
+> [REQUISITOS … 10 items …]
+> Mensaje final: "Ready to submit. Replace Tag placeholder cuando lo tengas."
+
+**Action taken:**
+- Full test suite: **150/150 pass**.
+- Ruff: 75 errors initially → 64 auto-fixed → 1 manual B904 fix (`raise … from e`) → relaxed 4 idiom-clash rules in `pyproject.toml` (B007/B008/B905/C408) → 1 SIM102 (nested if → and) + 1 F841 (unused var) fixed. Final: **0 lint errors**.
+- `make demo` with real Anthropic LLM → `docs/demo_output.txt`. 23.9s, $0.138, real Opus narrative + 3 Haiku enrichments.
+- Started API + MCP-HTTP + Streamlit in background → captured logs to `docs/runtime_smoke.log`.
+- `.github/workflows/ci.yml` already in place from layer 1.
+- Verified `.gitignore`: `.env` + `data/` excluded; `prompts.md`, `BITACORA.md`, `.session_meta.json` tracked.
+- Created `email_draft.md` for submission.
+
+---
+
 <!-- Subsequent entries are appended here. Each entry: # · UTC timestamp · short title, then verbatim prompt and action summary. -->

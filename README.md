@@ -1,43 +1,46 @@
 # Cloud Cost Optimizer & Remediation Engine
 
-> **Wolters Kluwer 2026 — Graduate Vibe Coding Challenge** · Project 1 (FinOps)
-> Built end-to-end via [Claude Code](https://claude.com/code) under a strict no-manual-edits regime. Architect-led, AI-engineered.
-
-Ingest AWS Cost & Usage Reports or Azure billing exports → detect orphaned/idle resources → produce a safe, multi-format decommission plan with a sub-agent enriched executive readout. **API-first, MCP-pluggable, dashboard-ready.**
+> **Wolters Kluwer 2026 — Graduate Vibe Coding Challenge · Project 1 (FinOps)**
+> Built end-to-end via [Claude Code](https://claude.com/code) under a strict no-manual-edits regime. The architect directs; the AI engineers.
 
 [![Repo](https://img.shields.io/badge/GitHub-andresKillem%2Fwk--finops--vibe--coding-181717?logo=github)](https://github.com/andresKillem/wk-finops-vibe-coding)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Vibe Coding](https://img.shields.io/badge/Built%20with-Vibe%20Coding-7B61FF)](./prompts.md)
+[![Tests](https://img.shields.io/badge/tests-150%20passing-2E7D55)](#tests)
+[![Vibe Coding](https://img.shields.io/badge/built%20with-Vibe%20Coding-7B61FF)](./prompts.md)
+
+Ingests AWS Cost & Usage Reports or Azure billing exports → detects orphaned/idle resources via 7 declarative rules → generates safe multi-format decommission plans (`aws_cli`, `boto3`, `terraform_import`) → orchestrates Opus + Haiku sub-agents to produce executive narrative and per-finding enrichment → exposes the same engine as an MCP server pluggable into any AI client.
+
+```
+        ◆ Architect: Andres Munoz
+        ◆ AI Engineer: Claude Code (claude-opus-4-7)
+        ◆ Tagle Tag: [INSERT TAG HERE WHEN AVAILABLE]
+```
 
 ---
 
-## Table of Contents
+## Highlights
 
-- [Quickstart](#quickstart)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Stack & Rationale](#stack--rationale)
-- [Vibe Coding Compliance](#vibe-coding-compliance)
-- [Demo URLs](#demo-urls)
-- [MCP Integration](#mcp-integration)
-- [Submission Checklist](#submission-checklist)
+- **150 tests passing** across ingestion, detection, remediation, API, sub-agents, and MCP layers.
+- **Two-layer hero work**: real Anthropic sub-agents (Opus orchestrator + Haiku workers in parallel) **and** the optimizer exposed as an MCP server.
+- **Defense in depth on safety**: settings deny-list + `safety_gate.sh` PreToolUse hook + Python `SafetyGate` validator + `min_confidence` threshold per rule + blast-radius gating.
+- **Deterministic fallback** for the entire agent layer — the demo runs without an API key, with the same shape as the LLM path.
+- **Architect's audit log** ([`prompts.md`](./prompts.md)) and **AI engineer's decision log** ([`BITACORA.md`](./BITACORA.md)) are deliberately distinct — see ADR-003.
 
----
-
-## Quickstart
+## Quickstart (30 seconds)
 
 ```bash
 git clone https://github.com/andresKillem/wk-finops-vibe-coding && cd wk-finops-vibe-coding
-cp .env.example .env                 # add your ANTHROPIC_API_KEY (optional — fallback works without)
-make install                         # uv sync
-make demo                            # ingest sample CUR → scan → analyze → report
+cp .env.example .env       # optional: add ANTHROPIC_API_KEY for real sub-agents
+uv sync --all-extras
+make demo                   # ingest sample CUR → scan → analyze → report
 ```
 
-Then in three terminals (or split-pane):
+Three terminals (or split-pane) for the full surface:
+
 ```bash
-make run-api          # FastAPI on :8000  (OpenAPI at /docs)
-make run-dashboard    # Streamlit on :8501
-make run-mcp          # MCP server (stdio)
+make run-api         # FastAPI on :8000 (OpenAPI docs at /docs)
+make run-dashboard   # Streamlit on :8501
+make run-mcp         # MCP server (stdio) for any AI client
 ```
 
 ## Architecture
@@ -45,76 +48,97 @@ make run-mcp          # MCP server (stdio)
 ```
                                     ┌─────────────────────────┐
                                     │  Streamlit Dashboard    │
-                                    │  (5 pages, polished)    │
+                                    │  5 pages, polished      │
                                     └────────────┬────────────┘
                                                  │ HTTP
                                                  ▼
 ┌────────────┐    ingest    ┌──────────────────────────────────┐    invoke
-│  Sample    │ ────────────▶│      FastAPI Core (REST)         │ ──────────▶  Anthropic
-│  CUR/JSON  │              │  /upload /analyze /remediate ... │              SDK
-└────────────┘              └──────┬─────────────┬─────────────┘
+│  AWS CUR / │ ────────────▶│      FastAPI Core (REST)         │ ──────────▶  Anthropic
+│  Azure JSON│              │  /upload /analyze /remediate ... │              SDK
+└────────────┘              │  /agents/analyze  /report  ...   │              (Opus + Haiku)
+                            └──────┬─────────────┬─────────────┘
                                    │             │
                           ┌────────▼───┐   ┌─────▼─────────┐         ┌──────────────┐
-                          │  Detector  │   │  Sub-agents   │ ──────▶ │ Anthropic    │
-                          │  (rules +  │   │  Analyzer/    │         │ Opus + Haiku │
-                          │   scoring) │   │  Remediator   │         └──────────────┘
-                          └────────┬───┘   └─────┬─────────┘
+                          │  Detector  │   │  Sub-agents   │ ──────▶ │ Opus 4.7     │
+                          │  7 rules   │   │  Analyzer +   │         │ Haiku 4.5    │
+                          │  + scoring │   │  Remediator   │         │ asyncio.gather
+                          └────────┬───┘   └─────┬─────────┘         └──────────────┘
                                    │             │
                                    ▼             ▼
                               ┌────────────────────────┐
                               │   SQLite + SQLModel    │
+                              │   BillingRecord ·      │
                               │   Resource · Finding · │
-                              │   RemediationPlan      │
+                              │   RemediationPlan ·    │
+                              │   AgentRun (audit)     │
                               └────────────────────────┘
 
-                    ◆ MCP server (stdio + http) exposes:
+                    ◆ MCP server (stdio + HTTP) exposes:
                        ingest_billing · analyze_billing
                        propose_remediation · estimate_savings
+                       list_findings · finops://findings
+                       finops://agent-runs · finops_audit prompt
                     so any MCP-aware client can use this engine as a tool.
 ```
 
+Layered modules — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for sequence diagrams.
+
+| Layer | Module | Responsibility |
+|---|---|---|
+| **Edge** | `finops.api`, `finops.dashboard`, `finops.mcp_server` | REST + Streamlit + MCP surfaces |
+| **Orchestration** | `finops.agents` | Sub-agent dispatch (Opus orchestrator + Haiku workers) |
+| **Domain** | `finops.detection`, `finops.remediation` | Rules engine, risk scoring, plan generation, safety gates |
+| **Data** | `finops.db`, `finops.ingestion` | Models, sessions, billing parsers |
+| **Cross-cutting** | `finops.config`, `finops.utils` | Settings, demo runner, status renderer |
+
 ## Features
 
-| Layer | What it does |
+| Surface | What it does |
 |---|---|
-| **Ingestion** | AWS CUR (CSV) and Azure Consumption (JSON) parsers; auto-format detection; resource upsert. |
-| **Detection** | 8 declarative rules covering EBS/EC2/EIP/NAT/RDS/ELB plus legacy generation. Risk-scored, severity-weighted. |
-| **Sub-agents (HERO #1)** | Opus orchestrator (single call, executive narrative) + Haiku workers (parallel, plan enrichment). Deterministic fallback if no API key. |
-| **MCP Server (HERO #2)** | Same engine exposed as universal tools — pluggable into Claude Code, Cursor, Claude Desktop. |
-| **Remediation** | Three formats per finding (`aws_cli`, `boto3`, `terraform_import`) with pre-checks, snapshots, dry-runs, rollback, stakeholder comms. |
-| **Safety gates** | Deny-list in `settings.json` + `safety_gate.sh` PreToolUse hook + Python-side validator. Multi-layered. |
-| **Dashboard** | Streamlit, 5 pages: Home (KPIs), Findings, Remediation Studio, AI Insights, System. |
-| **Webhook simulator** | POST to configurable URL when `overall_risk > threshold`. Async retry. |
-| **Agentic surface** | Custom skills, slash commands, sub-agent definitions, hooks — all functional, not decorative. |
-| **CI** | GitHub Actions running `uv sync + ruff + pytest` on every push. |
+| **Ingestion** | AWS CUR (CSV) and Azure Consumption (JSON); UTF-8-BOM tolerant; idempotent upsert. |
+| **Detection** | 7 declarative rules: orphaned EBS / idle EC2 / dangling EIP / idle NAT / idle RDS / unused ELB / legacy-gen instance. Multi-signal confidence calibration with `min_confidence` threshold. |
+| **Risk scoring** | `risk_score = severity_weight × confidence × (1 + cost_factor) × 10`. Volume-weighted aggregate. Calibrated labels: Healthy / Attention / Significant waste / Critical. |
+| **Remediation** | 18 templates (6 resource types × 3 formats: `aws_cli`, `boto3`, `terraform_import`). Pre-check / snapshot / dry-run / commented execute. Forbidden patterns blocked by `SafetyGate`. |
+| **Sub-agents (HERO #1)** | `AnalyzerAgent` (Opus 4.7, 1 call → narrative + ranked top-5) + `RemediatorAgent` (Haiku 4.5, parallel via `asyncio.gather`, max 5 concurrent). Deterministic fallback identical interface. |
+| **MCP server (HERO #2)** | 5 tools, 2 resources, 1 prompt template — pluggable into Claude Desktop, Claude Code, Cursor, custom agents. stdio + streamable-http. |
+| **Dashboard** | Streamlit, 5 pages: Home (KPIs + donut + trend), Findings (filter + drill-down), Remediation Studio (multi-select + Slack), AI Insights (Opus narrative + Haiku enrichments), System (agent runs audit). |
+| **Webhook simulator** | Async POST with 3-attempt exponential backoff; self-loopback `/alert-sink` so the demo runs without external services. |
+| **Agentic surface** | `.claude/` with skills, slash commands, sub-agent definitions, hooks (`safety_gate`, `prompt_logger`, `elapsed_time`, `status_line`). All functional, see ADR-004. |
+| **CI** | GitHub Actions: `uv sync` + `ruff` + `pytest -m "not integration and not llm"` on every push. |
 
 ## Stack & Rationale
 
 | Choice | Why |
 |---|---|
-| **FastAPI** | OpenAPI for free; native Pydantic; async first-class. |
-| **SQLite + SQLModel** | Zero infra; SQLModel = Pydantic + SQLAlchemy unified; trivial Postgres upgrade path. |
-| **Streamlit** | 5x faster to ship than React for analytical dashboards at this scope. |
-| **Anthropic SDK direct** | No LangChain overhead; sub-agents as plain `asyncio` coroutines. |
-| **MCP** | Reusable interface; pluggable into any MCP-aware client. |
-| **uv** | 10x faster than pip; lockfile included; reproducible installs. |
+| **FastAPI** | OpenAPI auto-generated; native Pydantic; async first-class for parallel sub-agent calls. |
+| **SQLite + SQLModel** | Zero infra; SQLModel = Pydantic + SQLAlchemy unified; trivial Postgres upgrade path. ADR-005. |
+| **Streamlit** | 5× faster to ship than React for analytical dashboards at this scope. ADR-015. |
+| **Anthropic SDK direct** | No LangChain overhead; sub-agents as plain `asyncio` coroutines. ADR-002, ADR-013. |
+| **MCP** | Reusable interface; pluggable into any MCP-aware client. Additive to REST, not redundant. ADR-014. |
+| **uv** | 10× faster than pip; lockfile included; reproducible installs. |
 
-Considered & rejected: LangGraph (overkill for fixed 1→N→1 topology), n8n (workflow-tool mismatch), Claude Managed Agents (consumes cloud the doc requires us to decommission), React (5x dashboard build time).
+**Considered & rejected** (transparency on scope discipline):
+- **LangGraph** — overkill for a fixed 1→N→1 graph.
+- **n8n** — workflow tool, wrong shape for an API-first deliverable.
+- **Claude Managed Agents** — consumes cloud the doc explicitly requires us to decommission.
+- **React frontend** — 5× build time vs Streamlit at the same polish.
 
-Full ADRs in [`BITACORA.md`](./BITACORA.md).
+Full ADR catalogue in [`BITACORA.md`](./BITACORA.md) (16 entries covering every meaningful choice).
 
 ## Vibe Coding Compliance
 
-This entire project was built without the architect editing a single line of code. The audit log is the proof.
+The architect did not edit a single line of code. The audit log proves it.
 
-- **`prompts.md`** — verbatim record of every architect directive (in original language: Spanish for authenticity).
-- **`BITACORA.md`** — Architecture Decision Records (ADR-lite) for every meaningful technical choice.
-- **`.session_meta.json`** — `STARTED_AT` timestamp source for elapsed-time hook.
-- **`.claude/hooks/elapsed_time.sh`** — Stop hook that emits `Elapsed Time: Xh Ym Zs` at end of every turn.
-- **`.claude/hooks/prompt_logger.sh`** — UserPromptSubmit hook that auto-appends prompts to `prompts.md` (deduplicated).
-- **`.claude/hooks/safety_gate.sh`** — PreToolUse hook that blocks destructive commands.
+| Artifact | What it shows |
+|---|---|
+| [`prompts.md`](./prompts.md) | Verbatim record of every architect directive, with English translations of Spanish-language prompts and AI-engineer action summaries. |
+| [`BITACORA.md`](./BITACORA.md) | Architecture Decision Records (16 ADRs) for every meaningful technical choice — including the one bug we fixed mid-build (ADR-009). |
+| [`.session_meta.json`](./.session_meta.json) | `STARTED_AT` timestamp source for the elapsed-time hook. |
+| [`.claude/hooks/elapsed_time.sh`](./.claude/hooks/elapsed_time.sh) | Stop hook emitting `Elapsed Time: Xh Ym Zs` to stderr at end of every turn. |
+| [`.claude/hooks/prompt_logger.sh`](./.claude/hooks/prompt_logger.sh) | UserPromptSubmit hook auto-appending prompts (deduplicated). |
+| [`.claude/hooks/safety_gate.sh`](./.claude/hooks/safety_gate.sh) | PreToolUse hook blocking `rm -rf`, `aws ec2 terminate`, etc. |
 
-The agentic surface in `.claude/` (skills, commands, sub-agents, hooks) is itself a deliverable — see [`docs/AGENTIC_SURFACE.md`](./docs/AGENTIC_SURFACE.md).
+The agentic surface in `.claude/` is itself a deliverable — see [`docs/AGENTIC_SURFACE.md`](./docs/AGENTIC_SURFACE.md).
 
 ## Demo URLs
 
@@ -123,46 +147,95 @@ After `make run-api`, `make run-dashboard`, `make run-mcp`:
 | Service | URL |
 |---|---|
 | API root | http://localhost:8000/ |
-| OpenAPI docs | http://localhost:8000/docs |
+| OpenAPI docs (Swagger) | http://localhost:8000/docs |
+| OpenAPI ReDoc | http://localhost:8000/redoc |
 | Health | http://localhost:8000/health |
 | Streamlit dashboard | http://localhost:8501/ |
 | MCP server (HTTP optional) | http://localhost:8765/ |
 
 ## MCP Integration
 
-To plug this into Claude Desktop or Claude Code, add to your MCP config:
+Add to your Claude Desktop / Claude Code config (`claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "finops": {
       "command": "uv",
-      "args": ["run", "python", "-m", "finops.mcp_server.server"],
-      "cwd": "/absolute/path/to/wk-finops-vibe-coding"
+      "args": ["run", "python", "-m", "finops.mcp_server"],
+      "cwd": "/absolute/path/to/wk-finops-vibe-coding",
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
     }
   }
 }
 ```
 
-Then in any MCP-aware client, tools `ingest_billing`, `analyze_billing`, `propose_remediation`, `estimate_savings` are available. Full integration guide: [`docs/MCP_INTEGRATION.md`](./docs/MCP_INTEGRATION.md).
+Restart the client. Five tools, two resources, and one prompt template appear:
+
+```
+Tools:        ingest_billing · analyze_billing · propose_remediation
+              estimate_savings · list_findings
+Resources:    finops://findings · finops://agent-runs
+Prompts:      finops_audit (audience: exec | engineer | compliance)
+```
+
+Full integration guide: [`docs/MCP_INTEGRATION.md`](./docs/MCP_INTEGRATION.md).
+
+## Screenshots
+
+<!-- Capture and replace these with real screenshots from the running dashboard -->
+
+| Page | Path |
+|---|---|
+| Home (KPIs + donut + trend) | `./assets/dashboard-home.png` |
+| Findings (filter + drill-down) | `./assets/dashboard-findings.png` |
+| Remediation Studio | `./assets/dashboard-remediation.png` |
+| AI Insights (Opus narrative + Haiku enrichments) | `./assets/dashboard-ai-insights.png` |
+| System (agent runs audit) | `./assets/dashboard-system.png` |
+| MCP client demo output | `./assets/mcp-client-demo.png` |
+
+To regenerate: run `make run-api` + `make run-dashboard`, capture each page, and drop into `./assets/`.
 
 ## Submission Checklist
 
-- [x] Public GitHub repository — [andresKillem/wk-finops-vibe-coding](https://github.com/andresKillem/wk-finops-vibe-coding)
+- [x] Public GitHub Repository — [andresKillem/wk-finops-vibe-coding](https://github.com/andresKillem/wk-finops-vibe-coding)
 - [x] Python-based, API-first, free-tier database (SQLite)
-- [x] Ingests AWS/Azure billing exports (JSON/CSV)
+- [x] Ingests AWS / Azure billing exports (JSON / CSV)
 - [x] Identifies orphaned resources
 - [x] Generates CLI commands / API logic to decommission
-- [x] `prompts.md` audit log (verbatim)
-- [x] `BITACORA.md` decision log (architectural reasoning)
+- [x] [`prompts.md`](./prompts.md) verbatim audit log
+- [x] [`BITACORA.md`](./BITACORA.md) decision log (architectural reasoning)
 - [x] AI-generated presentation deck — [`docs/PRESENTATION.md`](./docs/PRESENTATION.md)
-- [x] All cloud resources decommissioned: **N/A — offline-only build with synthetic billing data** (cleanest interpretation)
-- [ ] Tagle.ai "Tag" output: `<INSERT TAG HERE WHEN AVAILABLE>`
+- [x] All cloud resources decommissioned: **N/A — offline-only build with synthetic billing data** (cleanest interpretation; nothing was provisioned)
+- [ ] Tagle.ai "Tag" output: **`[INSERT TAG HERE WHEN AVAILABLE]`** ← architect to fill in
+
+## Tests
+
+```bash
+make test           # 150 tests
+make test-fast      # excludes integration/llm
+make lint           # ruff
+make check-all      # lint + typecheck + tests
+```
+
+| Test file | Coverage | Cases |
+|---|---|---|
+| `test_ingestion.py` | AWS CUR / Azure JSON parsers, edge cases, idempotency | 30 |
+| `test_detection.py` | 7 rules positive + negative, scoring, calibration, engine | 28 |
+| `test_remediation.py` | every (type × format), forbidden-pattern guard, safety gate | 33 |
+| `test_api.py` | every route, request-id, OpenAPI presence, alert sink | 16 |
+| `test_agents.py` | JSON extraction, cost estimation, fallback + mocked LLM, orchestrator | 14 |
+| `test_mcp.py` | tool/resource/prompt registration, direct callability | 11 |
+| **Total** | | **150** |
 
 ## License
 
 MIT. See [LICENSE](./LICENSE).
 
----
+## Author
 
-Built by Andres Munoz · Architect · 2026
+**Andres Munoz** · architect, with [Claude Code](https://claude.com/code) (`claude-opus-4-7`) as the AI engineer.
+
+Submission for the Wolters Kluwer 2026 Graduate Vibe Coding Challenge — Architecture and Engineering Services. Questions: kash.kashyap@wolterskluwer.com.
