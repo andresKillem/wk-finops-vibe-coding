@@ -200,4 +200,29 @@ ADRs added: 010 (forbidden patterns can't appear even in template comments), 011
 
 ---
 
+## #007 · 2026-05-08T03:50:00Z · Sub-agents (HERO #1) — Analyzer + Remediator
+
+**Type:** Architect directive — execute Prompt #7. Real LLM mode (key validated).
+
+**Original message excerpt (verbatim, ES):**
+
+> La capa hero #1: sub-agentes reales con Claude. Si no tengo API key, generas modo "deterministic-fallback" que mockea respuestas LLM con templating estructurado pero mantiene la misma interfaz.
+>
+> [REQUISITOS … 9 items …]
+>
+> Corre POST /agents/analyze con la sample data y muéstrame el output JSON estructurado. Reporta elapsed time.
+
+**Action taken:**
+- Built `agents/base.py` — BaseAgent ABC + AgentResponse dataclass + cost estimator + robust JSON extractor (handles prose-then-JSON, markdown fences, balanced braces). Lazy-instantiates `AsyncAnthropic` only when key present.
+- Built `agents/analyzer.py` — Opus orchestrator-grade single-call agent with FinOps Foundation framework system prompt, JSON-only output schema, and full deterministic fallback (severity×cost ranking, rule-based root-cause grouping, narrative templates).
+- Built `agents/remediator.py` — Haiku worker with strict "do not modify base plan" guardrail, per-resource-type fallback templates (preconditions / rollback / Slack-ready comm).
+- Built `agents/orchestrator.py` — `Orchestrator.run()` runs Analyzer once then dispatches Haiku Remediators in parallel via `asyncio.gather` + `asyncio.Semaphore(max_concurrent=5)`. Returns aggregated summary with token totals, cost, latency.
+- Added `POST /agents/analyze?top_n=N&fmt=...` and `GET /agents/runs?limit=N` to API.
+- 14 tests in `tests/test_agents.py` covering: JSON extraction edge cases, cost estimation, deterministic fallback for both agents, mocked-LLM path for both agents, invalid-JSON → graceful degradation, orchestrator end-to-end, AgentRun audit persistence.
+- Smoke (real Anthropic): `POST /agents/analyze?top_n=3` → 27s wall-clock · 4,300/2,538 tokens · $0.14 cost · fallback_mode=false. Opus narrative correctly inferred "decommissioned stage stack" pattern from 8 findings; Haiku enrichments included specific rollback procedures + adjacent optimisation suggestions.
+
+ADRs added: 013 (Opus orchestrator + Haiku workers cost-quality tradeoff documented).
+
+---
+
 <!-- Subsequent entries are appended here. Each entry: # · UTC timestamp · short title, then verbatim prompt and action summary. -->

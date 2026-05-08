@@ -235,4 +235,39 @@
 
 ---
 
+## ADR-013 · 2026-05-08 · Opus orchestrator + Haiku workers — cost-quality tradeoff measured
+
+**Context:** ADR-002 chose this topology architecturally; this ADR captures the *measured* result against real Anthropic calls.
+
+**Measurement** (single audit on 8 findings, 17 resources):
+
+| Tier | Calls | Tokens (in/out) | Wall-clock | Cost |
+|---|---|---|---|---|
+| Opus orchestrator (Analyzer) | 1 | 1,933 / 1,494 | 21.6s | $0.141 |
+| Haiku workers (Remediator × 3, parallel) | 3 | 2,367 / 1,044 | ~5s (parallelised) | $0.007 |
+| **Total** | **4** | **4,300 / 2,538** | **27s** | **$0.148** |
+
+**Quality (Analyzer narrative excerpt):**
+> *"The pattern — an idle legacy MySQL RDS, an idle r5.large, two orphaned EBS volumes, an unassociated EIP, and a NAT Gateway that moved 1.2 MB — strongly suggests a decommissioned or abandoned environment (likely a stage/legacy stack) where compute was torn down but networking and storage scaffolding were left behind."*
+
+The Opus narrative correctly inferred the *organisational story* from the data — not just summed costs. That's the kind of insight that justifies the spend; pure rule-based output couldn't have produced "stage/legacy stack abandoned" without a tag explicitly saying so.
+
+**Quality (Haiku Remediator enrichment excerpt):**
+> Adjacent optimisations: *"Audit other r5.large instances in us-east-1 for similar idle patterns; candidate for bulk right-sizing to r5.medium or t3.medium."* + *"Consider implementing auto-stop policy for instances tagged Lifecycle=idle to prevent recurring cost drift."*
+
+Haiku produced concrete, actionable suggestions tailored to the specific finding — exactly what we asked for and what would be wasteful to ask Opus for.
+
+**Cost lens:**
+- $0.15 per audit on a 17-resource account.
+- For a continuous FinOps practice running weekly, that's $7.80/year — compared to the $1,108/year detected savings, ROI > 140×.
+- For a 1,000-resource account (where token cost scales sub-linearly because findings count grows slower than resource count), audit cost stays under $1.
+
+**What we'd flip if findings count > 200:**
+- Pre-filter findings to top 50 by `risk_score × confidence` *before* Opus call (saves ~80% input tokens on noisy accounts).
+- Cache Analyzer narratives by (findings_hash, model_version); only re-call when findings change.
+
+**Fallback mode:** also tested. Same shape, $0 cost, ~50ms wall-clock. The system *prefers* the LLM path but *requires* the fallback to work — and 6 of the 14 agent tests exercise the fallback.
+
+---
+
 <!-- New decisions appended here as we build. -->

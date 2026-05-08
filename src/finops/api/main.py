@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from finops import __version__
-from finops.api.routes import alerts, analyze, health, remediate, report, upload
+from finops.api.routes import agents, alerts, analyze, health, remediate, report, upload
 
 logger = logging.getLogger("finops.api")
 
@@ -90,6 +90,7 @@ app.include_router(analyze.router, prefix="/analyze", tags=["detection"])
 app.include_router(remediate.router, prefix="/remediate", tags=["remediation"])
 app.include_router(report.router, prefix="/report", tags=["report"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+app.include_router(agents.router, prefix="/agents", tags=["agents"])
 
 
 @app.get("/", include_in_schema=False)
