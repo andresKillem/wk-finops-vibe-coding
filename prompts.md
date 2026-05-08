@@ -331,7 +331,7 @@ ADRs added: 014 (MCP alongside REST), 015 (Streamlit talks to API, not DB).
 - Started API + MCP-HTTP + Streamlit in background → captured logs to `docs/runtime_smoke.log`.
 - `.github/workflows/ci.yml` already in place from layer 1.
 - Verified `.gitignore`: `.env` + `data/` excluded; `prompts.md`, `BITACORA.md`, `.session_meta.json` tracked.
-- Created `email_draft.md` for submission.
+- Submission email drafted directly to the architect (kept out of the repo on purpose — emails are correspondence, not source code).
 
 ---
 
