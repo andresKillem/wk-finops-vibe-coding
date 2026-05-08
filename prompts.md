@@ -106,4 +106,52 @@ Rules:
 
 ---
 
+## #004 · 2026-05-08T01:30:00Z · Detection layer (rules + scoring + engine)
+
+**Type:** Architect directive — execute Prompt #4 from `PROMPTS_TO_SEND.md`.
+
+**Original message (verbatim, ES):**
+
+> Detection layer puro. Reglas determinísticas + Risk Score, sin AI todavía.
+>
+> REQUISITOS:
+> 1. src/finops/detection/rules.py: clase abstracta DetectionRule con .evaluate(resource, billing_history) -> Optional[Finding]
+>
+> 2. src/finops/detection/aws_rules.py — implementa estas reglas con justificación FinOps real:
+>    - OrphanedEBSRule: EBS volume sin attached EC2 en últimos 7d → severity HIGH
+>    - IdleEC2Rule: EC2 con avg CPU <5% (heurística: cost stable + sin spikes) por 14d → MEDIUM
+>    - DanglingElasticIPRule: EIP sin instance_id asociado → MEDIUM (cost ~$3.6/mo cada uno)
+>    - IdleNATGatewayRule: NAT con <1MB bytes processed por 7d → HIGH (cost ~$32/mo + GB)
+>    - IdleRDSRule: RDS sin DatabaseConnections >0 por 7d → HIGH
+>    - UnusedLoadBalancerRule: ELB sin healthy targets por 7d → MEDIUM
+>    - LegacyGenInstanceRule: instance type t2/m4/r4 → LOW (sugiere migrar a gravitón/gen actual)
+>
+> 3. src/finops/detection/scoring.py:
+>    - risk_score(finding) = severity_weight * confidence * (1 + cost_factor) — fórmula documentada
+>    - aggregate_score(findings) -> dict con total_monthly_waste, top_5_offenders, score_by_category, overall_risk (0-100)
+>
+> 4. src/finops/detection/engine.py: DetectionEngine.scan(session) → ejecuta todas las reglas, persiste Findings, devuelve aggregate
+>
+> 5. CLI: `finops scan` → ejecuta engine, output rich table con findings + total savings + score
+>
+> 6. tests/test_detection.py: cubre cada regla con fixtures positivos y negativos
+>
+> 7. prompts.md update + BITACORA.md: "rules-as-code pattern: por qué reglas declarativas y no un solo if-tree gigante"
+>
+> 8. Commit: "feat(detection): rules engine + risk scoring + CLI scan"
+>
+> Corre `finops ingest samples/aws_cur_sample.csv && finops scan` y muéstrame el output table. Reporta elapsed time.
+
+**Action taken:**
+- Built `detection/rules.py` (DetectionRule abstract + RuleSignal + RuleEvaluation), with multi-signal confidence calibration and `min_confidence` threshold (ADR-009 — caught a false positive during smoke test).
+- Built `detection/scoring.py` with documented risk_score formula and volume-weighted aggregate.
+- Built `detection/aws_rules.py` with all 7 rules; each rule documents production signal + offline proxy in its docstring and emits both into Finding.attrs for audit.
+- Built `detection/engine.py` (DetectionEngine + ScanResult rich-renderable).
+- 28 tests in `tests/test_detection.py` covering positive/negative for every rule + scoring + engine end-to-end. Combined with ingestion: 58/58 pass.
+- Scan output: 8 findings (HIGH:4 MEDIUM:3 LOW:1) on the 17-resource sample → $92.34/mo waste, risk 61 (Significant waste).
+
+ADRs added: 008 (rules-as-code), 009 (min_confidence threshold).
+
+---
+
 <!-- Subsequent entries are appended here. Each entry: # · UTC timestamp · short title, then verbatim prompt and action summary. -->

@@ -154,4 +154,38 @@
 
 ---
 
+## ADR-008 · 2026-05-08 · Rules-as-code pattern (declarative, not one giant if-tree)
+
+**Context:** Need to encode 7 detection rules now and likely 10–20 over time. Two structural options: (a) one big `detect_waste()` function with nested ifs, (b) declarative rule classes.
+
+**Decision:** Declarative rule classes. Each rule is a subclass of `DetectionRule` with explicit `applies_to` filter, `_evaluate_signals` method emitting named `RuleSignal` objects, and a documented production-signal vs offline-proxy pair.
+
+**Rationale:**
+1. **Auditability.** Each rule's *why* (production signal) and *how* (offline proxy) live next to its *what*. The Finding records the matching signals — a grader reading a single Finding row can reconstruct the rule's reasoning without opening the rule file.
+2. **Testability.** A test for `OrphanedEBSRule` is one fixture + two assertions. With a 200-line if-tree, "test for orphaned-EBS detection" becomes a system test.
+3. **Confidence calibration.** Multi-signal weights (e.g., EIP fires on EITHER `IdleAddress` charge present OR `Lifecycle=orphaned` tag) are first-class — not buried in if/elif chains.
+4. **Scalability.** Adding `R-S3-001` (orphaned bucket) is one new file in `aws_rules.py`. The engine doesn't change.
+5. **Cross-cloud reuse.** When we add Azure rules, they share the abstract base; signal-matching shape is identical. AWS-specific code stays in `aws_rules.py`.
+
+**Considered & rejected:**
+- **Generic schema validator (e.g., JSONSchema-style)** — too narrow; rules need access to billing_history for time-window logic.
+- **Open Policy Agent (Rego)** — overkill for a 4-6h MVP and adds an interpreter dependency.
+- **Procedural pipeline** (steps run sequentially with shared state) — fine for 1-2 rules; brittle at 7+, terrible at 20+.
+
+**Consequences:** Rule files are slightly more verbose than an if-tree would be, but each rule is independently understandable, testable, and replaceable. Same engine handles 1 rule or 100.
+
+---
+
+## ADR-009 · 2026-05-08 · Multi-signal rules need a `min_confidence` threshold
+
+**Context:** Initial implementation of `OrphanedEBSRule` had a primary signal (Lifecycle tag, weight 0.9) and a heuristic backup signal (`no_attachment_recorded` from `Resource.attrs`, weight 0.1). The base class fired the rule whenever **any** signal matched. Result: all 5 EBS volumes (including the 3 attached ones) fired R-EBS-001 because the offline proxy never populates `attached_to`, so `not attached` was always True — a 0.1-weight signal alone tripped the rule.
+
+**Decision:** Base class requires `confidence ≥ min_confidence` (default `0.5`) before emitting a Finding. Per-rule override available if a single weak signal is genuinely sufficient.
+
+**Rationale:** Multi-signal logic should compose, not lower the bar. Without a threshold, adding *any* heuristic signal — even one labelled "weak" via a small weight — admits more false positives. The threshold makes the math work: a single 0.9-weight signal still fires (0.9 ≥ 0.5); a single 0.1-weight signal does not (0.1 < 0.5); two 0.3-weight signals together do (0.6 ≥ 0.5).
+
+**Consequences:** All rules continue to function (their primary signals are weight ≥ 0.5). The smoke test went from 11 findings (3 false positives) to 8 findings (clean) on the 17-resource sample — matches the seeded ground truth exactly.
+
+---
+
 <!-- New decisions appended here as we build. -->
