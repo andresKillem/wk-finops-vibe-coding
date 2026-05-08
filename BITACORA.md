@@ -97,4 +97,61 @@
 
 ---
 
+## ADR-005 · 2026-05-07 · SQLModel over plain SQLAlchemy
+
+**Context:** Five tables, all of which need (a) ORM persistence, (b) Pydantic-grade serialisation for FastAPI/MCP IO, (c) easy JSON columns for `raw_record`, `attrs`, `commands`. Could go plain SQLAlchemy + Pydantic schemas separately, or SQLModel which unifies them.
+
+**Options considered:**
+- **Plain SQLAlchemy 2.0 + Pydantic models** — full control, two model definitions per table (one for DB, one for API).
+- **SQLModel** (FastAPI's own) — single class declares both ORM and Pydantic schema; `Field(sa_column=Column(JSON))` for JSON; first-class `Optional[int] = Field(default=None, primary_key=True)` pattern.
+- **Tortoise ORM / Beanie / Peewee** — different ecosystems; trades.
+
+**Decision:** **SQLModel.**
+
+**Rationale:**
+1. We're already using FastAPI; SQLModel was designed for that surface specifically.
+2. Single source of truth per table eliminates a class of "DB and API drifted" bugs.
+3. `JSON` columns (for `raw_record`, `attrs`, `commands`) work cleanly with `sa_column=Column(JSON, nullable=False)` and Python-side `default_factory=dict|list` — pattern we use in all four JSON fields.
+4. Cost: SQLModel < 1 dependency (it brings SQLAlchemy + Pydantic which we'd want anyway).
+
+**Consequences:**
+- Cannot use `metadata` as a field name (collides with `SQLModel.metadata`). We chose `attrs` everywhere — consistent and doesn't lie about its purpose.
+- For tests, pinning `DATABASE_URL` env var **before** any `finops` import is the right pattern, since the engine is module-level. Documented in `tests/conftest.py`.
+
+---
+
+## ADR-006 · 2026-05-07 · Naive UTC datetimes everywhere (no tzinfo)
+
+**Context:** SQLite does not preserve timezone information on roundtrip. SQLAlchemy can mix tz-aware (just-parsed) and tz-naive (just-loaded) datetimes in the same expression — Python raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Hit this on the second pass of `test_resource_idempotent_upsert`.
+
+**Options considered:**
+- **Always tz-aware** — store as UTC, configure SQLAlchemy + SQLite to preserve. Possible with custom `TypeDecorator`, but fragile across SQLAlchemy versions and SQLite has no native TZ type.
+- **Always naive UTC** — strip tzinfo before insert; use `datetime.now(UTC).replace(tzinfo=None)` for defaults. Document the convention.
+- **Cast on every comparison** — local fix at every comparison site. Brittle; future regressions guaranteed.
+
+**Decision:** **Naive UTC throughout the codebase.**
+
+**Rationale:** SQLite is the "free-tier database" the doc requires; the system must work with SQLite first-class. Naive-UTC is the project-wide convention; the absence of tzinfo *means* "UTC". Both `parse_iso_date()` and `models.utcnow()` produce naive-UTC; no comparison can mix tz-naive and tz-aware.
+
+**Consequences:**
+- Migration to Postgres (which *does* have native `timestamptz`) will require either keeping the convention (cast at edge) or one-shot data migration. Documented as a future-Postgres concern, not blocking now.
+- Anyone reading the code must know the convention; we say so in the docstrings of `utcnow()` and `parse_iso_date()`.
+
+---
+
+## ADR-007 · 2026-05-07 · Anthropic API key invalid → ship deterministic-fallback path first
+
+**Context:** User-provided `.env` had a key with correct shape (`sk-ant-`, 108 chars) but Anthropic returned `401 invalid x-api-key`. We had already designed a deterministic fallback in ADR-002.
+
+**Decision:** Continue building the system; the fallback path is the *primary* tested path until a valid key arrives. When a valid key is provided, sub-agents flip to live calls automatically (no code change needed — `settings.llm_enabled` is the toggle).
+
+**Rationale:**
+- A demo that *never* depended on a working API key is more credible than one that always needs one.
+- The grader may not have an API key either; deterministic mode means the demo runs anywhere.
+- "Bring your own key" pattern is the production-correct interface anyway.
+
+**Consequences:** First-pass agent integration tests (next prompt) will exercise the fallback path; live LLM tests are marked `@pytest.mark.llm` and skipped without a key.
+
+---
+
 <!-- New decisions appended here as we build. -->

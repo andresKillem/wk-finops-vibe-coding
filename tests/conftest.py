@@ -1,20 +1,30 @@
 """Shared pytest fixtures.
 
-Tests in this project are categorized:
-- unit (default) — fast, no external dependencies, in-memory or temp-file SQLite.
+CRITICAL: this file points the database at a temp location BEFORE any
+``finops`` import happens, so tests never touch the project's ``data/finops.db``.
+
+Tests in this project are categorised:
+- unit (default) — fast, in-memory or temp-file SQLite, no external services.
 - integration — may spin up servers or write to real files.
 - llm — requires ANTHROPIC_API_KEY; runs real Anthropic calls.
 
 Run subsets:
-    uv run pytest                              # all
+    uv run pytest                                     # all
     uv run pytest -m "not integration and not llm"   # fast only
-    uv run pytest -m llm                       # paid tests
+    uv run pytest -m llm                              # paid tests
 """
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 import pytest
+
+# ─── Set test DB BEFORE any finops import ──────────────────────────────────────
+_TEST_DIR = Path(tempfile.mkdtemp(prefix="finops_test_"))
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DIR / 'test.db'}"
+# ───────────────────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -27,7 +37,10 @@ def samples_dir(project_root: Path) -> Path:
     return project_root / "samples"
 
 
-@pytest.fixture
-def temp_db_url(tmp_path: Path) -> str:
-    """Per-test SQLite DB at a tmp_path so tests don't pollute each other."""
-    return f"sqlite:///{tmp_path / 'test.db'}"
+@pytest.fixture(autouse=True)
+def fresh_db():
+    """Wipe the test DB before every test for isolation."""
+    from finops.db.session import reset_db
+
+    reset_db()
+    yield

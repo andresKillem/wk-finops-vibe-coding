@@ -53,4 +53,57 @@ Rules:
 
 ---
 
+## #003 · 2026-05-07T20:35:00Z · Validate API key + Data layer & ingestion
+
+**Type:** Architect directive — execute Prompt #3 from `PROMPTS_TO_SEND.md`.
+**Side directives included:** validate the Anthropic API key in `.env`; fix git committer email to `andreco87@hotmail.com`.
+
+**Original message (verbatim, ES):**
+
+> prueba ya cree un .env, donde esta la api, pero pruebala si es valida, mi correo de github es andreco87@hotmail.com y 3 el prompt 3 es este (doker ya esta corriendo): Ahora la capa de datos e ingestion. Sin lógica de detección todavía — solo loaders y modelos.
+>
+> REQUISITOS:
+> 1. src/finops/db/models.py: SQLModel para
+>    - BillingRecord (id, cloud_provider, account_id, service, resource_id, region, usage_amount, cost, period_start, period_end, raw_record JSON)
+>    - Resource (id, resource_id UNIQUE, type [ebs/ec2/eip/nat/rds/elb/etc], state [orphaned/idle/active], region, account_id, last_seen, monthly_cost, metadata JSON)
+>    - Finding (id, resource_id FK, rule_id, severity, description, savings_estimate, risk_score, created_at)
+>    - RemediationPlan (id, finding_id FK, format [aws_cli/boto3/terraform], commands JSON, blast_radius, status, created_at)
+>    - AgentRun (id, agent_name, prompt, response, tokens_used, model, duration_ms, created_at)
+>
+> 2. src/finops/db/session.py: engine SQLite (./data/finops.db), get_session, init_db (crea tablas), util reset_db
+>
+> 3. src/finops/ingestion/aws_cur.py: parser de AWS Cost & Usage Report CSV
+>    - Maneja columnas estándar: lineItem/UsageStartDate, lineItem/ResourceId, lineItem/UnblendedCost, product/ProductName, product/region, lineItem/UsageType
+>    - Inserta BillingRecord; deduce Resource preliminar (state=unknown) y lo upserta
+>
+> 4. src/finops/ingestion/azure_billing.py: parser JSON de Azure billing exports (formato consumption API) — Mismo upsert pattern
+>
+> 5. src/finops/ingestion/router.py: detecta formato por extensión + heurística de columnas, delega al parser correcto
+>
+> 6. samples/aws_cur_sample.csv: 200 líneas REALISTAS — incluye: 5 EBS volumes (3 attached, 2 orphaned), 4 EC2 (2 active alta CPU, 1 idle <5%, 1 stopped 30+ días), 2 Elastic IPs (1 attached, 1 dangling), 2 NAT Gateways (1 con tráfico, 1 con 0 bytes 14 días), 2 RDS (1 active, 1 sin connections 7 días), 2 ELB (1 con healthy targets, 1 sin targets), múltiples regiones, montos realistas (centavos a $200/mo)
+>
+> 7. samples/azure_billing_sample.json: ~50 entries con managed disks + VMs en patrón análogo
+>
+> 8. tests/test_ingestion.py: pytest cubriendo ambos parsers + edge cases (CSV malformado, JSON vacío, encoding)
+>
+> 9. CLI helper en src/finops/cli.py (typer): `finops ingest <path>` que llama al router y muestra resumen rich
+>
+> 10. Actualiza prompts.md con este prompt #3 timestamped + BITACORA.md con la decisión "SQLModel sobre SQLAlchemy puro: por qué"
+>
+> 11. Commit: "feat(data): models, ingestion (AWS CUR + Azure), sample data, CLI"
+>
+> Corre los tests al final y muéstrame el output. Reporta elapsed time.
+
+**Acceptance criteria interpreted by AI:** all 11 listed items + side validation of API key + git committer fix.
+
+**Action taken:**
+- Fixed git committer to `Andres Munoz <andreco87@hotmail.com>` and amended initial commit.
+- `.env` validated as present (108-char key, `sk-ant-` prefix); a live Haiku call returned `401 invalid x-api-key` — key format is correct but Anthropic rejects it. Documented the fallback path; build proceeds in deterministic mode.
+- Wrote 5 SQLModel models, session helpers, AWS CUR parser, Azure JSON parser, router, sample data generator (deterministic with seed=42).
+- Generated 228-line AWS CUR (17 resources covering the spec mix) and 52-record Azure JSON (13 resources).
+- Wrote 30-test suite; all pass after a tz-naive datetime convention adjustment (ADR-006).
+- See commit `feat(data): models, ingestion (AWS CUR + Azure), sample data, CLI`.
+
+---
+
 <!-- Subsequent entries are appended here. Each entry: # · UTC timestamp · short title, then verbatim prompt and action summary. -->
