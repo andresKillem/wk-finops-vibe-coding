@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from finops.db.models import BillingRecord, Finding, Resource
-from finops.db.session import get_session
 from finops.detection.aws_rules import (
     DanglingElasticIPRule,
     IdleEC2Rule,
@@ -23,7 +22,7 @@ from finops.detection.aws_rules import (
     OrphanedEBSRule,
     UnusedLoadBalancerRule,
 )
-from finops.detection.engine import DetectionEngine, run_scan
+from finops.detection.engine import run_scan
 from finops.detection.scoring import (
     aggregate_score,
     calibration_label,

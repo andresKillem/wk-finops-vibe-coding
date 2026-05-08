@@ -11,7 +11,7 @@ Public entrypoints:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlmodel import select
@@ -21,7 +21,6 @@ from finops.db.models import Finding, RemediationPlan, Resource
 from finops.db.session import get_session, init_db
 from finops.remediation.safety import SafetyGate
 from finops.remediation.templates import render_template, short_id
-
 
 # Blast radius mapping per resource type. Documented in BITACORA ADR-010.
 BLAST_RADIUS_BY_TYPE: dict[str, str] = {
@@ -36,7 +35,7 @@ BLAST_RADIUS_BY_TYPE: dict[str, str] = {
 
 
 def _utcnow_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _build_context(resource: Resource, finding: Finding) -> dict[str, Any]:

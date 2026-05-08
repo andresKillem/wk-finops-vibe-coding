@@ -7,13 +7,13 @@ never instantiates its own engine. This keeps tests' DB-override trivial: set
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 from sqlmodel import Session, SQLModel, create_engine
 
-from finops.config import PROJECT_ROOT, settings
+from finops.config import settings
 
 
 def _ensure_data_dir() -> None:

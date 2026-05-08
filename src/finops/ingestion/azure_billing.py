@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from sqlmodel import select
 
@@ -27,7 +27,7 @@ from finops.ingestion.utils import (
 )
 
 
-def _normalize_record(rec: dict[str, Any]) -> Optional[dict[str, Any]]:
+def _normalize_record(rec: dict[str, Any]) -> dict[str, Any] | None:
     """Fold a nested-or-flat Azure record into our common shape."""
     if not isinstance(rec, dict):
         return None

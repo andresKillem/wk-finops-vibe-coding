@@ -12,7 +12,6 @@ from typing import Any
 from finops.agents.base import AgentResponse, BaseAgent, estimate_cost, extract_json_object
 from finops.config import settings
 
-
 SYSTEM_PROMPT = """\
 You are a senior FinOps engineer reviewing a cloud account's waste findings.
 You operate within the FinOps Foundation framework: Inform → Optimize → Operate → Report.

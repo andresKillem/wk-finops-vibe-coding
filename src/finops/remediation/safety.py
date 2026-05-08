@@ -13,7 +13,6 @@ from dataclasses import dataclass
 
 from finops.db.models import RemediationPlan
 
-
 # Patterns we never tolerate in any rendered plan or commands list.
 DANGEROUS_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("rm -rf",                    re.compile(r"\brm\s+-rf\b")),

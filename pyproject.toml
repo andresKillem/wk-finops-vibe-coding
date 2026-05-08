@@ -80,11 +80,18 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "C4", "SIM"]
-ignore = ["E501"]  # long lines OK in templates
+ignore = [
+    "E501",  # long lines OK in templates
+    "B008",  # FastAPI Depends/File/Query default pattern (idiomatic)
+    "B007",  # unused tuple-unpack variable in tests is fine
+    "B905",  # zip strict= not needed in our short-loop contexts
+    "C408",  # Plotly figure idiom uses dict() pervasively; fighting it is noise
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]
 "src/finops/cli.py" = ["B008"]  # typer pattern
+"src/finops/dashboard/app.py" = ["E402"]  # local imports inside function bodies
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

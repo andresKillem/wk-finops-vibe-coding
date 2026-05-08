@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -21,7 +21,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-
 
 API_URL = os.environ.get("FINOPS_API_URL", "http://127.0.0.1:8000")
 WK_BLUE = "#1B365D"
@@ -222,7 +221,6 @@ def page_findings() -> None:
                 fetch_full_scan()
             st.rerun()
 
-    rep = fetch_report()
     findings_full = fetch_full_scan().get("findings", []) if fetch_full_scan() else []
 
     if not findings_full:

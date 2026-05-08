@@ -7,13 +7,12 @@ state — never accumulating stale signal.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from finops.db.models import BillingRecord, Finding, Resource
-from finops.db.session import engine, get_session, init_db
+from finops.db.session import get_session, init_db
 from finops.detection.aws_rules import ALL_AWS_RULES
 from finops.detection.rules import DetectionRule
 from finops.detection.scoring import aggregate_score, risk_score
@@ -105,7 +104,7 @@ class ScanResult:
 class DetectionEngine:
     """Apply a set of DetectionRules to all Resources in the DB."""
 
-    def __init__(self, rules: Optional[list[DetectionRule]] = None) -> None:
+    def __init__(self, rules: list[DetectionRule] | None = None) -> None:
         if rules is None:
             rules = [cls() for cls in ALL_AWS_RULES]
         self.rules = rules
@@ -130,9 +129,8 @@ class DetectionEngine:
                     continue
                 f.risk_score = risk_score(f)
                 # Update Resource state (best-effort)
-                if r.state == "unknown":
-                    if rule.severity == "HIGH":
-                        r.state = "orphaned" if "orphan" in rule.rule_id.lower() else "idle"
+                if r.state == "unknown" and rule.severity == "HIGH":
+                    r.state = "orphaned" if "orphan" in rule.rule_id.lower() else "idle"
                 session.add(f)
                 new_findings.append(f)
 

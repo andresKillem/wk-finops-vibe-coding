@@ -13,8 +13,8 @@ expect timezone-aware datetimes throughout.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -27,7 +27,7 @@ def utcnow() -> datetime:
     mix offset-naive/aware datetimes. We normalise to naive UTC throughout —
     the convention is documented; absence of tzinfo means "UTC" project-wide.
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BillingRecord(SQLModel, table=True):
@@ -37,12 +37,12 @@ class BillingRecord(SQLModel, table=True):
     verbatim so we never lose audit fidelity, even if upstream schemas change.
     """
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     cloud_provider: str = Field(index=True, description="aws | azure")
     account_id: str = Field(default="", index=True)
     service: str = Field(default="", description="AmazonEC2, AmazonRDS, Microsoft.Compute, ...")
     resource_id: str = Field(index=True)
-    region: Optional[str] = Field(default=None, index=True)
+    region: str | None = Field(default=None, index=True)
     usage_amount: float = 0.0
     cost: float = 0.0
     period_start: datetime
@@ -63,12 +63,12 @@ class Resource(SQLModel, table=True):
     flips it to ``orphaned`` / ``idle`` / ``active`` once rules run.
     """
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     resource_id: str = Field(unique=True, index=True)
     type: str = Field(default="other", index=True, description="ebs|ec2|eip|nat|rds|elb|s3|other")
     state: str = Field(default="unknown", index=True, description="orphaned|idle|active|unknown")
-    region: Optional[str] = Field(default=None, index=True)
-    account_id: Optional[str] = Field(default=None, index=True)
+    region: str | None = Field(default=None, index=True)
+    account_id: str | None = Field(default=None, index=True)
     cloud_provider: str = Field(default="aws", index=True)
     last_seen: datetime = Field(default_factory=utcnow)
     monthly_cost: float = Field(default=0.0, description="Aggregated cost across BillingRecords")
@@ -86,7 +86,7 @@ class Finding(SQLModel, table=True):
     candidate for one or more RemediationPlans.
     """
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     resource_id: str = Field(foreign_key="resource.resource_id", index=True)
     rule_id: str = Field(index=True, description="R-EBS-001, R-EC2-001, ...")
     severity: str = Field(index=True, description="LOW|MEDIUM|HIGH")
@@ -108,7 +108,7 @@ class RemediationPlan(SQLModel, table=True):
     ``rendered`` is the full text the user will see and approve.
     """
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     finding_id: int = Field(foreign_key="finding.id", index=True)
     format: str = Field(description="aws_cli|boto3|terraform_import")
     commands: list[str] = Field(
@@ -128,7 +128,7 @@ class AgentRun(SQLModel, table=True):
     architect can review *how the AI reasoned* turn-by-turn after the fact.
     """
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     agent_name: str = Field(index=True, description="analyzer | remediator | reviewer | compliance")
     model: str = Field(description="claude-opus-4-7 | claude-haiku-4-5 | deterministic-fallback")
     prompt: str = ""

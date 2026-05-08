@@ -36,4 +36,4 @@ async def ready() -> ReadyResponse:
         raise HTTPException(
             status_code=503,
             detail={"status": "not ready", "db_ok": False, "error": str(e)},
-        )
+        ) from e

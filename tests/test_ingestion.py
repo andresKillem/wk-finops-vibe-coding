@@ -15,10 +15,9 @@ from pathlib import Path
 import pytest
 from sqlmodel import select
 
-from finops.db.models import BillingRecord, Resource
+from finops.db.models import Resource
 from finops.db.session import get_session
-from finops.ingestion.aws_cur import is_cur_csv, parse_cur_csv
-from finops.ingestion.azure_billing import parse_azure_json
+from finops.ingestion.aws_cur import is_cur_csv
 from finops.ingestion.router import ingest_file
 from finops.ingestion.utils import (
     infer_resource_type_aws,

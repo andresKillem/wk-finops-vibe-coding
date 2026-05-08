@@ -7,14 +7,12 @@ client so the test suite stays free of paid Anthropic calls.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from finops.agents.analyzer import AnalyzerAgent
 from finops.agents.base import (
-    AgentResponse,
     estimate_cost,
     extract_json_object,
 )
@@ -239,8 +237,9 @@ async def test_agent_run_persisted(samples_dir: Path, monkeypatch: pytest.Monkey
                  "total_monthly_waste": 50.0})
 
     from sqlmodel import select
-    from finops.db.session import get_session
+
     from finops.db.models import AgentRun
+    from finops.db.session import get_session
 
     with get_session() as s:
         rows = list(s.exec(select(AgentRun).where(AgentRun.agent_name == "analyzer")).all())

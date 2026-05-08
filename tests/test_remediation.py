@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from sqlmodel import select
 
-from finops.db.models import BillingRecord, Finding, RemediationPlan, Resource
+from finops.db.models import Finding, RemediationPlan, Resource
 from finops.db.session import get_session
 from finops.detection.engine import run_scan
 from finops.ingestion.router import ingest_file
@@ -21,8 +21,7 @@ from finops.remediation.generator import (
     build_plan,
 )
 from finops.remediation.safety import DANGEROUS_PATTERNS, SafetyGate
-from finops.remediation.templates import TEMPLATES, render_template
-
+from finops.remediation.templates import render_template
 
 RESOURCE_TYPES = ["ebs", "ec2", "eip", "nat", "rds", "elb"]
 FORMATS = ["aws_cli", "boto3", "terraform_import"]

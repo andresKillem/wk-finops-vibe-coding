@@ -5,7 +5,7 @@ this file is the executable form of that spec.
 """
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from finops.config import settings
 from finops.db.models import Finding, Resource

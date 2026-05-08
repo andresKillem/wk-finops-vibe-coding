@@ -1,0 +1,93 @@
+╭─────────────────────────────────────────╮
+│ FinOps Cost Optimizer — End-to-End Demo │
+╰─────────────────────────────────────────╯
+
+Step 1 — Reset and initialise database
+  ✓ schema ready
+
+Step 2 — Ingest billing exports
+╭─────────────────────────────── Ingest Summary ───────────────────────────────╮
+│  file                /Users/andresmunoz/Projects/Personal/Wolters/wk-finop…  │
+│  provider            aws                                                     │
+│  rows parsed         228                                                     │
+│  rows skipped        0                                                       │
+│  resources upserted  17                                                      │
+│  date range          2026-04-01 → 2026-04-30                                 │
+│  errors              0                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  Azure sample also present at azure_billing_sample.json; skipping in demo.
+
+Step 3 — Run detection engine
+╭─────────────────────────────── Detection Scan ───────────────────────────────╮
+│  Total monthly waste     $92.34                                              │
+│  Annual projection       $1108.08                                            │
+│  Overall risk score      61.01 · Significant waste                           │
+│  Findings                8 (HIGH:4 MEDIUM:3 LOW:1)                           │
+│  Resources evaluated     17                                                  │
+│  Rules evaluated         7                                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                         Top 5 offenders by risk_score                          
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃ rule_id   ┃ resource_id                           ┃ severity ┃  $/mo ┃  risk ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ R-NAT-001 │ nat-0a1b2c3d4e5f60002                 │ HIGH     │ 12.96 │ 90.37 │
+│ R-RDS-001 │ arn:aws:rds:us-east-1:123456789012:db │ HIGH     │ 24.19 │ 89.42 │
+│           │ :legacy-mysql-old                     │          │       │       │
+│ R-EBS-001 │ vol-0a1b2c3d4e5f60005                 │ HIGH     │  6.00 │ 84.80 │
+│ R-EBS-001 │ vol-0a1b2c3d4e5f60004                 │ HIGH     │  4.00 │ 83.20 │
+│ R-EC2-001 │ i-0abc1234def567803                   │ MEDIUM   │ 34.47 │ 34.29 │
+└───────────┴───────────────────────────────────────┴──────────┴───────┴───────┘
+            By resource category            
+┏━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ category ┃ count ┃ total $/mo ┃ max risk ┃
+┡━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ ec2      │     2 │      35.11 │    34.29 │
+│ rds      │     1 │      24.19 │    89.42 │
+│ nat      │     1 │      12.96 │    90.37 │
+│ ebs      │     2 │      10.00 │    84.80 │
+│ elb      │     1 │       6.48 │    27.15 │
+│ eip      │     1 │       3.60 │    31.08 │
+└──────────┴───────┴────────────┴──────────┘
+
+Step 4 — Run orchestrator (Analyzer + Remediators)
+╭───────────────────────────── Orchestrator stats ─────────────────────────────╮
+│ agents_invoked=4 · tokens_in=4300 / out=2519 · cost=$0.1382 ·                │
+│ wall_clock=23.9s · mode=LLM                                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  Executive narrative:
+    • Detected $92.34/mo in waste across 8 findings, with idle compute (RDS + 
+EC2 r5.large) driving 63% of the total at $58.66/mo.
+    • The pattern suggests a stalled or abandoned environment: a legacy MySQL 
+RDS, an idle r5.large, two orphaned EBS volumes, an unassociated EIP, a 
+near-zero-traffic NAT gateway, and a stage ALB with no healthy targets all point
+to a dev/stage stack that was partially torn down but never fully 
+decommissioned.
+    • Quick wins (orphaned EBS, unassociated EIP, idle NAT, empty ALB) total 
+$32.64/mo at zero production risk and should be executed first; the RDS and EC2 
+idle findings need owner confirmation before termination.
+
+  Recommended next action: findings=[5, 6, 4, 7] savings=$26.56/mo blast=low
+    Bundle the four fully-confident, fully-orphaned resources (two EBS volumes, 
+the unassociated EIP, and the near-zero-traffic NAT gateway) into a single 
+cleanup PR. All have confidence 1.0, none have active workloads, and together 
+they recover $26.56/mo with no user-facing impact. This builds momentum and 
+credibility before tackling the RDS/EC2 idle findings that require owner 
+sign-off.
+
+  Remediations enriched: 3
+    - finding #3 (R-EC2-001, MEDIUM, blast medium): plan + Haiku enrichment 
+ready
+    - finding #1 (R-RDS-001, HIGH, blast high): plan + Haiku enrichment ready
+    - finding #7 (R-NAT-001, HIGH, blast high): plan + Haiku enrichment ready
+
+Step 5 — Final report
+
+  Total monthly waste:        $92.34
+  12-month projection:        $1108.08
+  Overall risk score:         61.01  (Significant waste)
+  Findings:                   8 (HIGH:4 MEDIUM:3 LOW:1)
+╭──────────────────────────────────────────────────────────────╮
+│ Demo complete. Open the dashboard with `make run-dashboard`. │
+╰──────────────────────────────────────────────────────────────╯

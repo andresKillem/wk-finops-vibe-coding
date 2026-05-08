@@ -5,8 +5,7 @@ Imported by both ``aws_cur`` and ``azure_billing`` parsers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -18,8 +17,8 @@ class IngestSummary:
     rows_parsed: int = 0
     skipped: int = 0
     resources_upserted: int = 0
-    period_start: Optional[datetime] = None
-    period_end: Optional[datetime] = None
+    period_start: datetime | None = None
+    period_end: datetime | None = None
     errors: list[str] = field(default_factory=list)
 
     def __rich_console__(self, console, options):  # rich protocol
@@ -66,7 +65,7 @@ _DATE_FORMATS = (
 )
 
 
-def parse_iso_date(s: Optional[str]) -> Optional[datetime]:
+def parse_iso_date(s: str | None) -> datetime | None:
     """Parse a wide variety of date strings into a **naive UTC** datetime.
 
     SQLite does not preserve timezone info on roundtrip, so we normalise to
@@ -84,7 +83,7 @@ def parse_iso_date(s: Optional[str]) -> Optional[datetime]:
         try:
             dt = datetime.strptime(s, fmt)
             if dt.tzinfo is not None:
-                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                dt = dt.astimezone(UTC).replace(tzinfo=None)
             return dt
         except ValueError:
             continue
@@ -92,7 +91,7 @@ def parse_iso_date(s: Optional[str]) -> Optional[datetime]:
     try:
         dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
         if dt.tzinfo is not None:
-            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            dt = dt.astimezone(UTC).replace(tzinfo=None)
         return dt
     except ValueError:
         return None

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from finops.db.models import BillingRecord, Finding, Resource
 
@@ -73,7 +73,7 @@ class DetectionRule(ABC):
 
     def evaluate(
         self, resource: Resource, billing: list[BillingRecord]
-    ) -> Optional[Finding]:
+    ) -> Finding | None:
         """Public entrypoint. Returns a Finding if any signal matched, else None."""
         if not self.applies_to(resource):
             return None

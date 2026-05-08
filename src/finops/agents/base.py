@@ -12,7 +12,7 @@ import re
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from finops.config import settings
 from finops.db.models import AgentRun
@@ -35,7 +35,7 @@ class AgentResponse:
     duration_ms: int = 0
     cost_estimate: float = 0.0
     fallback_mode: bool = False
-    error: Optional[str] = None
+    error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -111,7 +111,7 @@ class BaseAgent(ABC):
 
     name: str = "base"
 
-    def __init__(self, model: Optional[str] = None) -> None:
+    def __init__(self, model: str | None = None) -> None:
         self.model = model or "deterministic-fallback"
         self._client = None
 

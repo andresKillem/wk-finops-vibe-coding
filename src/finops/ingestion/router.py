@@ -11,14 +11,13 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Union
 
 from finops.ingestion.aws_cur import is_cur_csv, parse_cur_csv
 from finops.ingestion.azure_billing import parse_azure_json
 from finops.ingestion.utils import IngestSummary
 
 
-def ingest_file(path: Union[Path, str]) -> IngestSummary:
+def ingest_file(path: Path | str) -> IngestSummary:
     """Detect a billing file's format and dispatch to the matching parser."""
     p = Path(path)
     if not p.exists():

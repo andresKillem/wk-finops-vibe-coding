@@ -7,7 +7,7 @@ receives so the demo is self-contained (no external services).
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @router.post("/webhook-test", response_model=WebhookResult, summary="Fire a test webhook")
 async def webhook_test() -> WebhookResult:
     payload: dict[str, Any] = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
         "message": "FinOps webhook smoke test",
     }
     result = await WebhookEmitter().send("test", payload)
