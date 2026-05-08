@@ -225,4 +225,51 @@ ADRs added: 013 (Opus orchestrator + Haiku workers cost-quality tradeoff documen
 
 ---
 
+## #008 · 2026-05-08T04:30:00Z · MCP server (HERO #2) — universal interface
+
+**Type:** Architect directive — execute Prompts #8 + #9 batched.
+**Original message excerpt #8 (verbatim, ES):**
+
+> batcheamos 8 y 9 Capa hero #2: exponer el optimizer como MCP server. Esto es el "2 pasos adelante" — cualquier cliente MCP (Claude Code, Cursor, etc) puede usarlo como tool externo.
+> [REQUISITOS … 8 items …]
+> Corre el `mcp_client_example.py` y muéstrame el output.
+
+**Action taken:**
+- Built `mcp_server/server.py` using official `mcp.server.fastmcp.FastMCP`. Exposes 5 tools (`ingest_billing`, `analyze_billing`, `propose_remediation`, `estimate_savings`, `list_findings`), 2 resources (`finops://findings`, `finops://agent-runs`), 1 audience-aware prompt (`finops_audit`).
+- Default transport stdio (most portable). HTTP/streamable mode via `--http` for inspection.
+- `mcp_client_example.py` — standalone client demo connecting via stdio, listing tools/resources/prompts, calling `estimate_savings`, reading `finops://findings`.
+- 11 tests (`tests/test_mcp.py`): instance presence, every tool callable returns expected shape, resources serialise, prompt template covers all 3 audiences, async `analyze_billing` works in fallback mode.
+- Smoke (real stdio round-trip): client connected → 5 tools listed → 2 resources listed → 1 prompt → `estimate_savings` returned `total_monthly_waste=92.34, overall_risk=61.01, findings_count=8` → 8 findings exposed via resource.
+- `docs/MCP_INTEGRATION.md` updated with full tool + resource catalog.
+
+ADR-014 captures why MCP is shipped alongside the FastAPI surface.
+
+---
+
+## #009 · 2026-05-08T04:55:00Z · Streamlit dashboard — 5 pages, polished
+
+**Original message excerpt #9 (verbatim, ES):**
+
+> Dashboard visual. Streamlit, polished, demo-ready en 30s.
+> [REQUISITOS … 7 items …]
+> Levanta el dashboard background y describe lo que muestra cada página corriendo.
+
+**Action taken:**
+- Built `dashboard/app.py` (single file, ~440 lines) with sidebar nav across 5 pages:
+  1. **Home** — 4 KPI metrics (Monthly Waste, Findings, Risk Score, 12-mo Savings); Plotly donut chart by category; daily-cost trend line; top-5 offenders table.
+  2. **Findings** — file uploader with live ingestion; sidebar filters (severity, rule, search); rich `st.dataframe`; CSV export; per-finding drill-down with format selector that calls `/remediate/{id}`.
+  3. **Remediation Studio** — `st.data_editor` with checkbox column for multi-select; aggregate plan generation; Slack-send button (calls `/alerts/alert-sink`); per-plan expander with markdown rendering.
+  4. **AI Insights** — calls `/agents/analyze`; shows token / cost / latency metrics; executive narrative bullets; recommended next action; top-5 ranking; per-finding Haiku enrichment expanders.
+  5. **System** — agent-runs audit table with token/cost rollups; configuration table; tail of `prompts.md`.
+- All HTTP through FastAPI (`httpx`); zero direct DB access from dashboard. ADR-015 captures why.
+- Custom theme via `.streamlit/config.toml`: Wolters dark blue (`#1B365D`) primary, clean accents, no chillón emojis (sober ◆ icon).
+- CLI: `finops dashboard` (already stubbed) → `streamlit run`.
+- Smoke (background): API up :8000 + Streamlit up :8501 → both responsive (HTTP 200), Streamlit renders client-side via JS (5.4KB shell).
+
+Combined suite after both layers: **150/150 pass**.
+
+ADRs added: 014 (MCP alongside REST), 015 (Streamlit talks to API, not DB).
+
+---
+
 <!-- Subsequent entries are appended here. Each entry: # · UTC timestamp · short title, then verbatim prompt and action summary. -->

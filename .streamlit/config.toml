@@ -1,0 +1,16 @@
+# Streamlit theme — Wolters-corporate-ish dark blue + clean accents.
+# Custom theme keeps the demo from looking like every other Streamlit app.
+
+[theme]
+primaryColor = "#1B365D"            # Wolters dark blue
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F4F9"
+textColor = "#1C2024"
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = true
+
+[browser]
+gatherUsageStats = false

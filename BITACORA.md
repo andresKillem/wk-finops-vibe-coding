@@ -270,4 +270,36 @@ Haiku produced concrete, actionable suggestions tailored to the specific finding
 
 ---
 
+## ADR-014 · 2026-05-08 · MCP server *alongside* the FastAPI surface, not instead of
+
+**Context:** Both the REST API and the MCP server expose the same engine. Why ship two doors?
+
+**Decision:** Both. They're not redundant — they target different consumers.
+
+**Rationale:**
+- **REST is for humans + traditional clients.** Browsers, curl, Postman, the Streamlit dashboard. Auth/CORS/OpenAPI all expected.
+- **MCP is for AI agents.** Claude Desktop, Claude Code, Cursor, custom orchestrators. Schema-introspectable, streaming, capability-discovery built-in. No client-specific glue.
+- Shipping only REST forces every AI client to either (a) call the REST API (loses MCP's introspection benefits) or (b) get its own custom adapter. Shipping only MCP loses the dashboard story.
+- The cost of "two doors" is one extra ~250-line module (`mcp_server/server.py`); the engine logic underneath is shared.
+
+**Consequences:** A future Postgres migration / multi-tenant change touches both surfaces uniformly because they delegate to the same domain layer. Documentation cost is ~one extra integration guide (`docs/MCP_INTEGRATION.md`).
+
+---
+
+## ADR-015 · 2026-05-08 · Dashboard talks to FastAPI, not directly to the DB
+
+**Context:** Streamlit can import `finops.db.session` directly and run SQL — fewer moving parts, faster local iteration. Or the dashboard can talk to the FastAPI surface via httpx.
+
+**Decision:** Always via FastAPI.
+
+**Rationale:**
+1. **Single auth/permissions surface** going forward. If we add API keys, RBAC, or rate-limiting, the dashboard inherits them automatically.
+2. **Hot-reload separation.** A dashboard restart never touches the DB schema; an API restart never invalidates dashboard state. Independent deployment story.
+3. **Pluggable backend.** A future replacement of FastAPI with FastMCP-only or a different framework doesn't require a dashboard rewrite — just point `FINOPS_API_URL` somewhere new.
+4. **Testability.** The dashboard can be tested with a stub API; we don't need a real DB to render pages. (Future: visual regression with mocked HTTP.)
+
+**Consequences:** One extra HTTP hop per dashboard page render. Acceptable: HTTP localhost is sub-millisecond, and we cache via `@st.cache_data(ttl=10–15s)`. Net latency stays under 50ms per page.
+
+---
+
 <!-- New decisions appended here as we build. -->
