@@ -27,14 +27,16 @@ Restart the client. The four tools below should appear in the tool picker.
 
 | Tool | Input | Output | When to use |
 |---|---|---|---|
-| `ingest_billing` | `file_path: str` | `{rows, date_range, resources}` | Load a billing export into the local DB |
-| `analyze_billing` | none | `{findings, overall_risk, narrative}` | Run scan + sub-agents and get an executive readout |
-| `propose_remediation` | `finding_id: int`, `format: "aws_cli"|"boto3"|"terraform_import"` | rendered plan as text | Generate a single safe remediation plan |
-| `estimate_savings` | none | `{monthly, annual, by_category}` | Quick savings projection |
+| `ingest_billing` | `file_path: str` | IngestSummary dict | Load a billing export into the local DB |
+| `analyze_billing` | `top_n: int = 5` | Full orchestrator result (analyzer narrative + remediations) | Run scan + Opus/Haiku sub-agents and get an executive readout |
+| `propose_remediation` | `finding_id: int`, `format` | RemediationPlan dict (commands, blast_radius, rendered) | Generate a single safe multi-format plan |
+| `estimate_savings` | none | aggregate dict (waste, risk, by_category, top_5) | Quick savings projection |
+| `list_findings` | `severity: str = ""`, `limit: int = 50` | list of finding dicts | Filterable listing for downstream tools |
 
 ## Resources exposed
 
 - `finops://findings` — current findings as JSON. Useful when an LLM client wants to reason over the raw data.
+- `finops://agent-runs` — recent AgentRun audit entries (model, tokens, latency, cost) — auditing what the LLM did.
 
 ## Prompts exposed
 
