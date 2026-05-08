@@ -61,7 +61,10 @@ def get_session() -> Iterator[Session]:
             s.add(record)
             # commit happens automatically on context exit
     """
-    session = Session(engine)
+    # expire_on_commit=False: instances retain loaded attribute values after
+    # commit, which is required so callers can iterate / serialise objects
+    # *outside* the with-block (e.g., FastAPI route returning Findings).
+    session = Session(engine, expire_on_commit=False)
     try:
         yield session
         session.commit()

@@ -166,7 +166,10 @@ def parse_cur_csv(path: Path) -> IngestSummary:
         for rid, info in resources_seen.items():
             existing = session.exec(select(Resource).where(Resource.resource_id == rid)).first()
             if existing:
-                existing.monthly_cost = round(existing.monthly_cost + info["monthly_cost"], 6)
+                # REPLACE rather than add: monthly_cost represents the cost
+                # observed in this ingest's billing rows for the resource.
+                # Re-ingesting the same file is therefore idempotent.
+                existing.monthly_cost = round(info["monthly_cost"], 6)
                 if info["last_seen"] > existing.last_seen:
                     existing.last_seen = info["last_seen"]
                 # Merge attrs (shallow)
