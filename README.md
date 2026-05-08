@@ -13,8 +13,12 @@ Ingests AWS Cost & Usage Reports or Azure billing exports → detects orphaned/i
 ```
         ◆ Architect: Andres Munoz
         ◆ AI Engineer: Claude Code (claude-opus-4-7)
-        ◆ Tagle Tag: [INSERT TAG HERE WHEN AVAILABLE]
+        ◆ Tagle Tag: The Architect (Navigator edge | Developing)
+                     G:63 · A:75 · C:75 · R:72 · I:50
+                     "You master what others skim — depth is your edge"
 ```
+
+> The challenge document opens with: *"You are the architect; the AI is the engineer."* Per the Tagle.ai assessment, my AI-readiness type is also **The Architect** — *"Architects don't settle for surface-level understanding. You build deep expertise and create solid foundations for AI integration. While others experiment at random, you develop mastery that compounds over time."* The two framings line up; this submission is the architect mindset applied end-to-end.
 
 ---
 
@@ -209,7 +213,7 @@ To regenerate: run `make run-api` + `make run-dashboard`, capture each page, and
 - [x] [`BITACORA.md`](./BITACORA.md) decision log (architectural reasoning)
 - [x] AI-generated presentation deck — [`docs/PRESENTATION.md`](./docs/PRESENTATION.md)
 - [x] All cloud resources decommissioned: **N/A — offline-only build with synthetic billing data** (cleanest interpretation; nothing was provisioned)
-- [ ] Tagle.ai "Tag" output: **`[INSERT TAG HERE WHEN AVAILABLE]`** ← architect to fill in
+- [x] Tagle.ai "Tag" output: **The Architect (Navigator edge, Developing)** — Growth 63 · Autonomy 75 · Competence 75 · Relatedness 72 · Innovation 50 — [result link](https://tagle.ai/quiz/result?g=63&a=75&c=75&r=72&i=50)
 
 ## Tests
 

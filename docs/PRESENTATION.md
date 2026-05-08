@@ -12,9 +12,13 @@ A FinOps audit pipeline built end-to-end via "Vibe Coding"
 
 - **Architect:** Andres Munoz
 - **AI Engineer:** Claude Code (`claude-opus-4-7`, 1M context)
-- **Tagle Tag:** `[INSERT TAG HERE WHEN AVAILABLE]`
+- **Tagle Tag:** **The Architect** (Navigator edge · Developing) — G:63 · A:75 · C:75 · R:72 · I:50
 - **Repo:** [github.com/andresKillem/wk-finops-vibe-coding](https://github.com/andresKillem/wk-finops-vibe-coding)
 - **Submission date:** 2026-05-08
+
+> *"Architects don't settle for surface-level understanding. You build deep expertise and create solid foundations for AI integration."* — Tagle.ai
+>
+> The challenge says *"You are the architect; the AI is the engineer."* The Tagle assessment independently flagged the same type. This deck and the work behind it are the architect mindset applied end-to-end.
 
 ---
 

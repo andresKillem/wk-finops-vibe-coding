@@ -11,6 +11,8 @@ Please find my submission for the Wolters Kluwer 2026 Graduate Vibe Coding Chall
 
 The deliverable is a Python 3.11, API-first FinOps engine built end-to-end via "vibe coding" — the architect (me) directed; the AI engineer (Claude Code, `claude-opus-4-7`, 1M context) wrote every line of code. Per the rules, I did not edit the codebase manually at any point. The verbatim audit log at `prompts.md` is the proof.
 
+A small alignment worth flagging: the challenge document opens with *"You are the architect; the AI is the engineer."* The Tagle.ai assessment independently classified my AI-readiness type as **The Architect** — *"Architects don't settle for surface-level understanding. You build deep expertise and create solid foundations for AI integration."* I tried to live up to that framing in the work, particularly in the agentic surface (`.claude/`) and in the BITACORA decision log.
+
 ## Submission package
 
 | Deliverable | Where |
@@ -23,7 +25,7 @@ The deliverable is a Python 3.11, API-first FinOps engine built end-to-end via "
 | **MCP integration guide** | https://github.com/andresKillem/wk-finops-vibe-coding/blob/main/docs/MCP_INTEGRATION.md |
 | **Demo run output** | https://github.com/andresKillem/wk-finops-vibe-coding/blob/main/docs/demo_output.txt |
 | **Runtime smoke logs (API + MCP + dashboard)** | https://github.com/andresKillem/wk-finops-vibe-coding/blob/main/docs/runtime_smoke.log |
-| **Tagle.ai Tag** | `[INSERT TAG HERE WHEN AVAILABLE]` |
+| **Tagle.ai Tag** | **The Architect** (Navigator edge · Developing) — G:63 · A:75 · C:75 · R:72 · I:50 — [result link](https://tagle.ai/quiz/result?g=63&a=75&c=75&r=72&i=50) |
 
 ## Three innovations worth a closer look
 
