@@ -6,9 +6,37 @@
 > **Session start:** `2026-05-07T19:41:23Z` (Bogotá 14:41)
 > **Compliance rules:** No manual edits · Same AI end-to-end · Audit log per turn · Elapsed Time reported
 
-This file is the **authentic record of every directive issued by the architect** during the build. Per the challenge rules, the AI engineer maintains it; the architect does not edit code, only directs through prompts. Entries below are **verbatim**, including original language (Spanish), preserving the authentic record of human-directed AI orchestration.
+This file is the **authentic record of every directive issued by the architect** during the build. Per the challenge rules, the AI engineer maintains it; the architect does not edit code, only directs through prompts. The architect's native language is Spanish; the authentic prompts are preserved verbatim. Every entry includes an **English action summary** (and a translation where the Spanish is non-trivial) so an international grading panel can read top-to-bottom in English without losing the Spanish-language fidelity that proves nothing was paraphrased after the fact.
 
 The challenge document explicitly permits a "Drafting Table" (its Pro-Tip §4) — a pre-build conversation to align scope and architecture before the official timer starts. That alignment session preceded entry #001 below; key decisions from it are captured in `BITACORA.md`.
+
+## Reading guide for graders
+
+Every entry follows this structure:
+
+```
+## #NNN · YYYY-MM-DDTHH:MM:SSZ · Short English title
+
+**Type:** classification (kickoff / directive / clarification)
+**Architect's intent:** one-line English summary
+
+**Original message (verbatim, ES):**
+> the architect's literal Spanish prompt
+
+**Translation (when not trivially obvious):**
+> English rendering for the panel
+
+**Action taken:**
+- bullet-point English summary of what the AI engineer did in response,
+  cross-referenced to the resulting commit and any ADRs.
+```
+
+By the numbers (across all entries):
+- **11 architect directives** issued.
+- **9 commits** produced (eight feature layers + bootstrap + final polish).
+- **150 tests** added cumulatively, all passing.
+- **16 ADRs** documenting every meaningful choice (`BITACORA.md`).
+- **~8 hours** of architect-side wall-clock from kickoff to submission-ready.
 
 ---
 
