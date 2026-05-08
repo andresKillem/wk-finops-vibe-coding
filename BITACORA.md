@@ -188,4 +188,51 @@
 
 ---
 
+## ADR-010 · 2026-05-08 · Templates can't *mention* the forbidden patterns either
+
+**Context:** The first templates contained safety-conscious language like *"Never `--force`"* in docstrings or *"# NOT `-auto-approve`"* in comments. The intent was correct — *don't do this* — but the SafetyGate's regexes are not context-aware (they don't know `#` precedes a comment in shell, or `"""` opens a docstring in Python). The regex matched the literal pattern and rejected templates that *advised against* the dangerous behaviour.
+
+**Options considered:**
+1. **Make the regex context-aware** — strip comments/docstrings before scanning. Possible but format-specific and fragile (multi-line strings, here-docs, Python triple-quotes vs shell heredocs).
+2. **Reword templates** — never mention the literal pattern, even to negate it.
+3. **Maintain an allowlist** — pattern X is OK in this specific docstring location.
+
+**Decision:** Reword templates. Replace `"--force"` with `"force flag"`, `"--skip-final-snapshot"` with `"final snapshot is mandatory"`, `"-auto-approve"` (when adjacent to terraform apply/destroy on the same line) with `"never auto-approve"`, etc.
+
+**Rationale:** This is the cheapest, most reliable option. The cost is minor wording adjustment in templates; the benefit is a single, simple, context-free regex pass that works on any future template addition. A future contributor who *unintentionally* introduces a literal forbidden pattern in a comment also gets caught — that's a feature, not a bug.
+
+**Consequences:** Generated plans use slightly more verbose phrasing in their safety commentary. Stakeholders reading a plan still see the safety story clearly. The validator's promise is now: "the rendered plan, including its comments, contains zero literal mentions of forbidden patterns" — which is the strongest property for a downstream consumer that *might* execute parts of it.
+
+---
+
+## ADR-011 · 2026-05-08 · Ingestion is idempotent — `monthly_cost` REPLACES on re-ingest
+
+**Context:** Smoke-testing the API after the remediation layer revealed that re-ingesting the same CSV doubled `Resource.monthly_cost` (and therefore findings' savings_estimate and risk_score). The pre-fix upsert added `info["monthly_cost"]` to the existing value, accumulating across ingests.
+
+**Decision:** Replace, not add. After upsert, `Resource.monthly_cost` reflects the cost computed in the *current* ingest's billing rows for that resource.
+
+**Rationale:**
+- Demo correctness: a user uploading the same file twice expects the same numbers, not 2× numbers.
+- Idempotency for tests: re-ingest cycles are deterministic.
+- For multi-period ingests (April + May), the *latest* ingest's numbers represent the most-recent observed monthly cost — which is the FinOps view anyway. Cumulative period analysis lives at the BillingRecord level, where rows still accumulate.
+
+**Consequences:** Multi-period rollup queries should aggregate `BillingRecord.cost`, not read `Resource.monthly_cost`. The latter is now explicitly "last-observed monthly cost", documented in the model.
+
+---
+
+## ADR-012 · 2026-05-08 · Pydantic IO schemas are separate from SQLModel storage models
+
+**Context:** SQLModel can act as both ORM and Pydantic schema (its USP). FastAPI returning SQLModel instances directly works. Two reasons we still split: (a) the wire shape and the storage shape have *different* lifecycles; (b) we want to control exactly what's exposed.
+
+**Decision:** Define `schemas.py` with explicit `IngestSummaryOut`, `FindingOut`, `RemediationPlanOut`, `ScanResultOut`, `ReportOut`, `WebhookResult`, `AlertEcho`, `HealthResponse`. Routes return these, not SQLModel.
+
+**Rationale:**
+- **DB → API change isolation.** Renaming a DB column (e.g., `attrs` → `metadata_json` later) shouldn't break consumers — they consume `FindingOut`.
+- **Selective exposure.** `BillingRecord.raw_record` is a verbatim line-item with potentially-sensitive tag values; the API never auto-includes it. The storage shape "knows" about the raw row; the API shape decides.
+- **Explicit auto-generated docs.** OpenAPI schemas built from `schemas.py` are concise and named for the wire — what frontend developers expect.
+
+**Consequences:** Slight duplication. Worth it; the lifecycle separation prevents the typical "we changed the DB and broke 3 clients" failure mode. ADR-005 (SQLModel choice) and this ADR are complementary, not contradictory: SQLModel is for storage, Pydantic for I/O.
+
+---
+
 <!-- New decisions appended here as we build. -->

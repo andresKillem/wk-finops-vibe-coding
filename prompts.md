@@ -154,4 +154,50 @@ ADRs added: 008 (rules-as-code), 009 (min_confidence threshold).
 
 ---
 
+## #005 · 2026-05-08T03:00:00Z · Remediation generator (3 formats + safety gates)
+
+**Type:** Architect directive — execute Prompts #5 + #6 in parallel.
+**Original message (verbatim, ES):**
+
+> si hagamos en paralelo lo que mas se pueda te mando el promp 5 y el prompt 6
+> Generador de planes de remediation. Salida en 3 formatos por finding, con safety gates explícitos.
+>
+> [REQUISITOS … 8 items …]
+>
+> Genera un ejemplo de plan para un orphaned EBS y muéstrame los 3 formatos. Reporta elapsed time.
+
+**Action taken:**
+- Built `remediation/templates.py` — 18 Jinja2 templates (6 resource types × 3 formats), each enforcing pre-check / snapshot / dry-run / commented-out execute. Generator self-validates against `SafetyGate` before returning.
+- Built `remediation/generator.py` — RemediationGenerator + `build_plan()` entrypoint; blast_radius mapping per type; full markdown rendering with stakeholder Slack-ready message.
+- Built `remediation/safety.py` — SafetyGate.validate() with 12 forbidden-pattern regexes + blast-radius gating override.
+- 33 tests covering every (type, format) combo for forbidden patterns + scoring + blast-radius gates + end-to-end plan generation. All pass.
+- Encountered + fixed in smoke: literal mentions of forbidden patterns inside docstrings/comments tripped the validator (correctly). Reworded all template docstrings; ADR-010 captures the convention.
+- Discovered + fixed during API smoke: ingestion was *adding* monthly_cost on re-upsert instead of replacing it, doubling totals on re-ingest. Fixed to be idempotent. ADR-011 captures the decision.
+
+---
+
+## #006 · 2026-05-08T03:30:00Z · FastAPI surface + webhook simulator
+
+**Type:** Architect directive — same message as #005 (executed in parallel).
+**Original message excerpt (verbatim, ES):**
+
+> y Capa API. RESTful, OpenAPI, con webhook simulator para alertas.
+>
+> [REQUISITOS … 8 items …]
+>
+> Levanta el servidor (background), curl /health, curl POST /upload con sample CSV, curl POST /analyze, muéstrame OpenAPI docs URL. Reporta elapsed time.
+
+**Action taken:**
+- Built `api/main.py` — FastAPI app with title="Cloud Cost Optimizer", request_id+timing middleware, global exception handler (JSON shape with rid), CORS open for dev, 6 route groups mounted with tags.
+- Built `api/schemas.py` — full Pydantic IO model set, separate from SQLModel storage models (ADR-012 rationale).
+- Built `api/webhooks.py` — async WebhookEmitter with 3-attempt exponential backoff (1s → 2s → 4s).
+- Built routes: `health.py` (/health, /ready), `upload.py` (multipart), `analyze.py` (run scan + auto-fire webhook on threshold), `remediate.py` (/{finding_id}?fmt=...), `report.py`, `alerts.py` (/webhook-test + self-loopback /alert-sink).
+- Added `python-multipart` to deps for upload support.
+- 16 API tests via TestClient: every route happy path + missing-finding 404 + invalid-format 422 + self-loop alert-sink + OpenAPI doc presence. All pass.
+- Smoke test: server up on :8001 → /health 200 (llm_enabled=true) → /upload 228 rows / 17 resources → /analyze 8 findings / $92.34/mo / overall_risk 69 → OpenAPI at /docs.
+
+ADRs added: 010 (forbidden patterns can't appear even in template comments), 011 (ingestion idempotent: replace cost on upsert), 012 (Pydantic schemas separate from SQLModel storage).
+
+---
+
 <!-- Subsequent entries are appended here. Each entry: # · UTC timestamp · short title, then verbatim prompt and action summary. -->
